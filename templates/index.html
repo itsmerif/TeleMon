@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="60">
+    <title>TeleMon</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            background-color: black;
+            border-bottom: 1px solid #333;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            text-align: center;
+        }
+
+        .header img {
+            height: 80px;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        .side-panel {
+            width: 250px;
+            background-color: #1e1e1e;
+            border-right: 1px solid #333;
+            height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+
+        .side-panel h3 {
+            margin: 0 0 10px 0;
+        }
+
+        .side-panel form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .side-panel input, .side-panel button {
+            padding: 10px;
+            border: 1px solid #333;
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+
+        .side-panel button:hover {
+            background-color: #333;
+        }
+
+        .toggle-button {
+            position: absolute;
+            top: 20px;
+            right: -30px;
+            background-color: #333;
+            color: #ffffff;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .toggle-button:hover {
+            background-color: #555;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #444;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #333;
+            text-align: center;
+        }
+
+        tr:nth-child(even) {
+            background-color: #1e1e1e;
+        }
+
+        tr:hover {
+            background-color: #333;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 10px;
+            margin: 0 5px;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border: 1px solid #333;
+            cursor: pointer;
+        }
+
+        .pagination button:hover {
+            background-color: #333;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filters input, .filters button {
+            padding: 10px;
+            border: 1px solid #333;
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+
+        .filters button:hover {
+            background-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="/static/images/ckr_full.png" width="100" height="200" alt="CKr Logo">
+        <h1>TeleMon</h1>
+    </div>
+
+    <div class="container">
+        <div class="side-panel" id="side-panel">
+            <!-- <button class="toggle-button" onclick="toggleSidePanel()">☰</button> -->
+            <h3>Add Keywords</h3>
+            <form onsubmit="addKeyword(event)">
+                <input type="text" id="keyword-input" placeholder="Enter Keyword" required>
+                <button type="submit">Add Keyword</button>
+            </form>
+
+            <h3>Add Channels</h3>
+            <form onsubmit="addChannel(event)">
+                <input type="text" id="channel-input" placeholder="Enter Channel Name" required>
+                <button type="submit">Add Channel</button>
+            </form>
+        </div>
+
+        <div class="main-content">
+            <h2>Monitoring in Progress...</h2>
+            <div class="filters">
+                <input type="date" id="start-date" placeholder="Start Date">
+                <input type="date" id="end-date" placeholder="End Date">
+                <button onclick="applyFilters()">Show only chats</button>
+                <button onclick="filterURLs()">Show Messages only with Links</button>
+                <button onclick="resetFilters()">Reset Filters</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Channel</th>
+                        <th>Message</th>
+                        <th>Date of Indexing</th>
+                    </tr>
+                </thead>
+                <tbody id="matched-data-table"></tbody>
+            </table>
+
+            <div class="pagination">
+                <button onclick="previousPage()">Previous</button>
+                <button onclick="nextPage()">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const limit = 10;
+
+        // Function to toggle the side panel
+        function toggleSidePanel() {
+            const sidePanel = document.getElementById('side-panel');
+            sidePanel.style.width = sidePanel.style.width === '0px' ? '250px' : '0px';
+        }
+
+        // Function to add a keyword
+        function addKeyword(event) {
+            event.preventDefault();
+            const keyword = document.getElementById('keyword-input').value;
+            fetch('/add_keyword', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keyword }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                document.getElementById('keyword-input').value = '';
+            });
+        }
+
+        // Function to add a channel
+        function addChannel(event) {
+            event.preventDefault();
+            const channel = document.getElementById('channel-input').value;
+            fetch('/add_channel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                document.getElementById('channel-input').value = '';
+            });
+        }
+
+        // Fetch matched data based on filters
+        function fetchMatchedData(params = '') {
+            fetch(`/get_matched_data?page=${currentPage}&limit=${limit}${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    const table = document.getElementById('matched-data-table');
+                    table.innerHTML = '';
+                    data.data.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.channel}</td>
+                            <td>${item.message}</td>
+                            <td>${item.date}</td>
+                        `;
+                        table.appendChild(row);
+                    });
+                });
+        }
+
+        // Function to apply filters (for chats only)
+        function applyFilters() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const params = `&start_date=${startDate}&end_date=${endDate}`;
+            currentPage = 1;
+            fetchMatchedData(params); 
+        }
+
+        // Function to filter URLs only
+        function filterURLs() {
+            const params = '&urls_only=true';
+            currentPage = 1;
+            fetchMatchedData(params); 
+        }
+
+        // Reset filters and show both chats and URLs
+        function resetFilters() {
+            currentPage = 1;
+            fetchMatchedData(); 
+        }
+
+        // Pagination functions
+        function nextPage() {
+            currentPage++;
+            fetchMatchedData();
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchMatchedData();
+            }
+        }
+
+        fetchMatchedData();
+    </script>
+</body>
+</html>
