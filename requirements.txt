@@ -1,0 +1,7 @@
+flask
+request
+jsonify
+sqlite3
+telethon.sync
+telethon
+asyncio
